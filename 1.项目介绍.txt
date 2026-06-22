@@ -605,3 +605,13 @@ python scripts/play.py Boying-HIM-Rough \
 
 多卡的话加 --gpu-ids 0 1：
 python scripts/train.py Boying-HIM-Rough --gpu-ids 0 1 --env.scene.num-envs=4096
+
+
+python scripts/train.py Boying-HIM-Rough \
+    --env.scene.num-envs=4096 \
+    --agent.resume=True \
+    --agent.load_run="2026-06-21_19-15-48" \
+    --agent.load_checkpoint="model_2000.pt" 
+
+1180效果不错
+    
