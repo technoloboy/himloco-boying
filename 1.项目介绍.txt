@@ -615,3 +615,8 @@ python scripts/train.py Boying-HIM-Rough \
 
 1180效果不错
     
+python export_him_onnx.py --checkpoint <any_model_N.pt> 
+
+ python scripts/play_onnx.py Boying-HIM-Rough \
+    --onnx_file logs/rsl_rl/boying_him_velocity/2026-06-21_16-41-29/policy_1180.onnx
+
