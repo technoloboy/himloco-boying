@@ -55,5 +55,5 @@ def boying_him_ppo_runner_cfg() -> RslRlOnPolicyRunnerCfg:
     experiment_name="boying_him_velocity",
     save_interval=20,
     num_steps_per_env=100,
-    max_iterations=200000,
+    max_iterations=20000,
   )
