@@ -408,6 +408,14 @@ class variable_posture:
     return torch.exp(-torch.mean(error_squared / (std**2), dim=1))
 
 
+def action_rate_l2(env: ManagerBasedRlEnv) -> torch.Tensor:
+  """Penalize action rate, clamped to prevent gradient explosion."""
+  raw = torch.sum(
+    torch.square(env.action_manager.action - env.action_manager.prev_action), dim=1
+  )
+  return raw.clamp(max=10.0)
+
+
 def stand_still(
         env: ManagerBasedRlEnv,
         command_name: str,

@@ -333,7 +333,7 @@ def make_velocity_env_cfg() -> ManagerBasedRlEnvCfg:
     "is_terminated": RewardTermCfg(func=mdp.is_terminated, weight=-10.0),
     "joint_acc_l2": RewardTermCfg(func=mdp.joint_acc_l2, weight=-2.5e-7),
     "joint_pos_limits": RewardTermCfg(func=mdp.joint_pos_limits, weight=-1.0),
-    "action_rate_l2": RewardTermCfg(func=mdp.action_rate_l2, weight=-0.05),
+    "action_rate_l2": RewardTermCfg(func=mdp.action_rate_l2, weight=-0.01),
     "joint_power": RewardTermCfg(
       func=mdp.electrical_power_cost,
       weight=-2e-5,
