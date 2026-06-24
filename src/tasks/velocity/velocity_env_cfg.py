@@ -25,12 +25,74 @@ from mjlab.sensor import GridPatternCfg, ObjRef, RayCastSensorCfg
 from mjlab.sim import MujocoCfg, SimulationCfg
 from mjlab.tasks.velocity import mdp
 from mjlab.tasks.velocity.mdp import UniformVelocityCommandCfg
-from mjlab.terrains import TerrainEntityCfg
-from mjlab.terrains.config import ROUGH_TERRAINS_CFG
+from mjlab.terrains import (
+  TerrainEntityCfg,
+  TerrainGeneratorCfg,
+  BoxFlatTerrainCfg,
+  BoxPyramidStairsTerrainCfg,
+  BoxInvertedPyramidStairsTerrainCfg,
+  HfPyramidSlopedTerrainCfg,
+  HfPerlinNoiseTerrainCfg,
+  HfWaveTerrainCfg,
+)
 from mjlab.utils.noise import UniformNoiseCfg as Unoise
 from mjlab.viewer import ViewerConfig
 
 import src.tasks.velocity.mdp as mdp
+
+
+# Terrain generator with HIMLoco-style linear difficulty scaling per row.
+# mjlab automatically scales parameters by difficulty = row / num_rows when
+# curriculum=True.  Parameter upper bounds are tuned for Boying (smaller than A1).
+# HfRandomUniform is replaced with HfPerlinNoise which properly scales with difficulty.
+_ROUGH_TERRAIN_CFG = TerrainGeneratorCfg(
+  size=(8.0, 8.0),
+  border_width=20.0,
+  num_rows=10,
+  num_cols=20,
+  curriculum=False,  # boying/env_cfgs.py sets curriculum=True for training
+  sub_terrains={
+    "flat": BoxFlatTerrainCfg(proportion=0.2),
+    "pyramid_stairs": BoxPyramidStairsTerrainCfg(
+      proportion=0.2,
+      step_height_range=(0.0, 0.08),
+      step_width=0.3,
+      platform_width=3.0,
+      border_width=1.0,
+    ),
+    "pyramid_stairs_inv": BoxInvertedPyramidStairsTerrainCfg(
+      proportion=0.2,
+      step_height_range=(0.0, 0.08),
+      step_width=0.3,
+      platform_width=3.0,
+      border_width=1.0,
+    ),
+    "hf_pyramid_slope": HfPyramidSlopedTerrainCfg(
+      proportion=0.1,
+      slope_range=(0.0, 0.4),
+      platform_width=2.0,
+      border_width=0.25,
+    ),
+    "hf_pyramid_slope_inv": HfPyramidSlopedTerrainCfg(
+      proportion=0.1,
+      slope_range=(0.0, 0.4),
+      platform_width=2.0,
+      border_width=0.25,
+      inverted=True,
+    ),
+    "hf_perlin_noise": HfPerlinNoiseTerrainCfg(
+      proportion=0.1,
+      height_range=(0.0, 0.06),
+    ),
+    "wave_terrain": HfWaveTerrainCfg(
+      proportion=0.1,
+      amplitude_range=(0.0, 0.10),
+      num_waves=4,
+      border_width=0.25,
+    ),
+  },
+  add_lights=True,
+)
 
 
 def make_velocity_env_cfg() -> ManagerBasedRlEnvCfg:
@@ -432,7 +494,7 @@ def make_velocity_env_cfg() -> ManagerBasedRlEnvCfg:
     scene=SceneCfg(
       terrain=TerrainEntityCfg(
         terrain_type="generator",
-        terrain_generator=replace(ROUGH_TERRAINS_CFG),
+        terrain_generator=replace(_ROUGH_TERRAIN_CFG),
         max_init_terrain_level=3,
       ),
       sensors=(terrain_scan,),
