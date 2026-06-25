@@ -5,12 +5,14 @@ from mjlab.envs import ManagerBasedRlEnvCfg
 from mjlab.envs import mdp as envs_mdp
 from mjlab.envs.mdp.actions import JointPositionActionCfg
 from mjlab.managers import TerminationTermCfg
+from mjlab.managers.curriculum_manager import CurriculumTermCfg
 from mjlab.managers.event_manager import EventTermCfg
 from mjlab.sensor import ContactMatch, ContactSensorCfg, RayCastSensorCfg
 from mjlab.tasks.velocity import mdp
 from mjlab.tasks.velocity.mdp import UniformVelocityCommandCfg
 
 from src.tasks.velocity.velocity_env_cfg import make_velocity_env_cfg
+from src.tasks.velocity.mdp.curriculums import commands_vel_adaptive
 
 
 def boying_rough_env_cfg(play: bool = False) -> ManagerBasedRlEnvCfg:
@@ -108,6 +110,27 @@ def boying_rough_env_cfg(play: bool = False) -> ManagerBasedRlEnvCfg:
   cfg.terminations["illegal_contact"] = TerminationTermCfg(
     func=mdp.illegal_contact,
     params={"sensor_name": nonfoot_ground_cfg.name, "force_threshold": 10.0},
+  )
+
+  # Set initial narrow velocity ranges; adaptive curriculum expands toward targets.
+  twist_cmd = cfg.commands["twist"]
+  assert isinstance(twist_cmd, UniformVelocityCommandCfg)
+  twist_cmd.ranges.lin_vel_x = (-0.5, 1.0)
+  twist_cmd.ranges.lin_vel_y = (-0.5, 0.5)
+  twist_cmd.ranges.ang_vel_z = (-1.0, 1.0)
+
+  cfg.curriculum["command_vel"] = CurriculumTermCfg(
+    func=commands_vel_adaptive,
+    params={
+      "command_name": "twist",
+      "reward_name": "track_linear_velocity",
+      "target_lin_vel_x": (-1.0, 2.0),
+      "target_lin_vel_y": (-1.0, 1.0),
+      "target_ang_vel_z": (-1.0, 1.0),
+      "mastery_threshold": 0.7,
+      "expand_rate": 0.005,
+      "ema_alpha": 0.02,
+    },
   )
 
   if play:

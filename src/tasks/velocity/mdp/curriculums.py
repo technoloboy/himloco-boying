@@ -99,6 +99,67 @@ def commands_vel(
   }
 
 
+class commands_vel_adaptive:
+  """Smoothly expand velocity command ranges as tracking reward improves.
+
+  Uses EMA of track_linear_velocity reward as mastery signal.
+  Only expands when ema > mastery_threshold, at rate expand_rate per call.
+  """
+
+  def __init__(self, cfg, env: "ManagerBasedRlEnv"):
+    self._reward_name = cfg.params["reward_name"]
+    self._ema = 0.0
+    self._ema_alpha = cfg.params.get("ema_alpha", 0.02)
+
+  def __call__(
+    self,
+    env: "ManagerBasedRlEnv",
+    env_ids,
+    command_name: str,
+    reward_name: str,
+    target_lin_vel_x: tuple[float, float],
+    target_lin_vel_y: tuple[float, float],
+    target_ang_vel_z: tuple[float, float],
+    mastery_threshold: float = 0.7,
+    expand_rate: float = 0.005,
+    ema_alpha: float = 0.02,
+  ) -> dict[str, torch.Tensor]:
+    del env_ids  # Unused.
+    rm = env.reward_manager
+    if reward_name in rm._term_names:
+      idx = rm._term_names.index(reward_name)
+      current_reward = rm._step_reward[:, idx].mean().item()
+    else:
+      current_reward = 0.0
+    self._ema = ema_alpha * current_reward + (1.0 - ema_alpha) * self._ema
+
+    command_term = env.command_manager.get_term(command_name)
+    assert command_term is not None
+    ranges = command_term.cfg.ranges
+
+    if self._ema > mastery_threshold:
+      def _expand(current, target):
+        lo = current[0] + expand_rate * (target[0] - current[0])
+        hi = current[1] + expand_rate * (target[1] - current[1])
+        lo = max(lo, target[0]) if target[0] < current[0] else min(lo, target[0])
+        hi = min(hi, target[1]) if target[1] > current[1] else max(hi, target[1])
+        return (lo, hi)
+
+      ranges.lin_vel_x = _expand(ranges.lin_vel_x, target_lin_vel_x)
+      ranges.lin_vel_y = _expand(ranges.lin_vel_y, target_lin_vel_y)
+      ranges.ang_vel_z = _expand(ranges.ang_vel_z, target_ang_vel_z)
+
+    return {
+      "reward_ema":   torch.tensor(self._ema),
+      "lin_vel_x_lo": torch.tensor(ranges.lin_vel_x[0]),
+      "lin_vel_x_hi": torch.tensor(ranges.lin_vel_x[1]),
+      "lin_vel_y_lo": torch.tensor(ranges.lin_vel_y[0]),
+      "lin_vel_y_hi": torch.tensor(ranges.lin_vel_y[1]),
+      "ang_vel_z_lo": torch.tensor(ranges.ang_vel_z[0]),
+      "ang_vel_z_hi": torch.tensor(ranges.ang_vel_z[1]),
+    }
+
+
 def reward_weight(
   env: ManagerBasedRlEnv,
   env_ids: torch.Tensor,
