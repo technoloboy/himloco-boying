@@ -1,14 +1,15 @@
 """Boying HIM velocity environment configurations.
 
-Mirrors HIMLoco Go1 obs layout with scale parity.
+Mirrors HIMLoco Go1 obs layout exactly:
+  - Actor history (proprio_history): 45D × 6 = 270D (phase OFF)
+      command(3,×[2,2,0.25]) + ang_vel(3,×0.25) + gravity(3)
+    + dof_pos(12) + dof_vel(12,×0.05) + actions(12) = 45D
+  - Actor history (phase ON): 47D × 6 = 282D (add phase(2))
+  - Critic (privileged): 238D = 45D + lin_vel(3,×2.0) + ext_force(3) + height(187,×5.0)
+  - estimator_vel: 3D (ground-truth lin_vel for estimator supervision)
 
-Single-step proprio dim S depends on MJLAB_PHASE_ENABLED:
-  - phase OFF (default): S = 47
-      ang_vel(3,×0.25) + gravity(3) + command(3,scaled[2,2,0.25])
-    + joint_pos(12) + joint_vel(12,×0.05) + actions(12) + lin_vel(3,×2.0) = 47
-  - phase ON: S = 49 (add phase(2))
-
-History T = 6. proprio_history = T × S, proprio_current = S, estimator_vel = 3.
+lin_vel is NOT in the actor history — it belongs in critic privileged obs only.
+History T = 6. Network dims auto-inferred from obs shape.
 """
 
 from __future__ import annotations
@@ -30,14 +31,15 @@ PHASE_ENABLED = os.environ.get("MJLAB_PHASE_ENABLED", "0") == "1"
 
 
 def _proprio_terms() -> dict[str, ObservationTermCfg]:
-  """Boying proprioceptive single-step terms aligned to HIMLoco Go1 obs_scales.
+  """Boying HIM proprioceptive single-step terms.
 
-  Noise values are final (noise_level × noise_scale × obs_scale):
-    ang_vel: 1.0 × 0.2 × 0.25 = 0.05
-    gravity: 1.0 × 0.05 × 1.0 = 0.05
-    dof_pos: 1.0 × 0.01 × 1.0 = 0.01
-    dof_vel: 1.0 × 1.5  × 0.05 = 0.075
-    lin_vel: 1.0 × 0.1  × 2.0  = 0.2
+  Mirrors HIMLoco Go1 45D actor history obs exactly:
+    command(3,×[2,2,0.25]) + ang_vel(3,×0.25) + gravity(3)
+    + dof_pos(12) + dof_vel(12,×0.05) + actions(12) = 45D (phase OFF)
+    = 47D (phase ON with extra phase(2))
+
+  lin_vel is NOT here — it belongs in critic privileged obs only (HIMLoco parity).
+  Noise values are final (noise_level × noise_scale × obs_scale).
   """
   terms: dict[str, ObservationTermCfg] = {
     "base_ang_vel": ObservationTermCfg(
@@ -73,12 +75,7 @@ def _proprio_terms() -> dict[str, ObservationTermCfg]:
       scale=0.05,
     ),
     "actions": ObservationTermCfg(func=mdp.last_action),
-    "base_lin_vel": ObservationTermCfg(
-      func=mdp.builtin_sensor,
-      params={"sensor_name": "robot/imu_lin_vel"},
-      noise=Unoise(n_min=-0.2, n_max=0.2),
-      scale=2.0,
-    ),
+    # NO base_lin_vel — belongs in critic privileged obs only (HIMLoco parity)
   })
   return terms
 
