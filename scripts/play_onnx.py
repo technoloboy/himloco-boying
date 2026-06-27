@@ -208,6 +208,8 @@ def main() -> None:
         config=mjlab.TYRO_FLAGS,
     )
 
+    remaining_args = [a for a in remaining_args if a != "--phase"]
+
     args = tyro.cli(
         PlayOnnxConfig,
         args=remaining_args,

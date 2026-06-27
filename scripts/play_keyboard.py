@@ -215,6 +215,8 @@ def main() -> None:
     config=mjlab.TYRO_FLAGS,
   )
 
+  remaining_args = [a for a in remaining_args if a != "--phase"]
+
   cfg = tyro.cli(
     _Cfg,
     args=remaining_args,

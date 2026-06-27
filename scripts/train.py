@@ -210,6 +210,10 @@ def main():
     config=mjlab.TYRO_FLAGS,
   )
 
+  # Strip --phase from remaining_args — it was consumed by the pre-scan above
+  # and is not a tyro-registered field in TrainConfig.
+  remaining_args = [a for a in remaining_args if a != "--phase"]
+
   args = tyro.cli(
     TrainConfig,
     args=remaining_args,
