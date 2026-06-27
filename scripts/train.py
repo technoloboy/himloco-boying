@@ -31,8 +31,6 @@ class TrainConfig:
   enable_nan_guard: bool = False
   torchrunx_log_dir: str | None = None
   gpu_ids: list[int] | Literal["all"] | None = field(default_factory=lambda: [0])
-  phase: bool = False
-  """Enable gait phase observation (sin/cos period 0.5s). Default: disabled."""
 
   @staticmethod
   def from_task(task_id: str) -> "TrainConfig":

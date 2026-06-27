@@ -127,8 +127,6 @@ class PlayOnnxConfig:
     video_width: int | None = None
     viewer: Literal["auto", "native", "viser"] = "auto"
     no_terminations: bool = False
-    phase: bool = False
-    """Enable gait phase observation — must match the training config of the checkpoint."""
 
 
 # ─────────────────────────────────────────────────────────────────────────────

@@ -194,8 +194,6 @@ class _Cfg:
   """Number of parallel environments."""
   device: str | None = None
   """Torch device (default: cuda:0 if available, else cpu)."""
-  phase: bool = False
-  """Enable gait phase observation — must match the training config of the checkpoint."""
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
