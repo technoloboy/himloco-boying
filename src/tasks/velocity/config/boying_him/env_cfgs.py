@@ -6,11 +6,14 @@ Mirrors the Go2-HIM pattern:
 - Critic: inherits the full privileged observation group from the base boying config,
   including height_scan on rough terrain.
 
-Boying single-step proprioceptive dim S = 47:
+Boying single-step proprioceptive dim S = 50:
     base_ang_vel(3) + projected_gravity(3) + command(3) + phase(2)
-  + joint_pos(12) + joint_vel(12) + actions(12) = 47
+  + joint_pos(12) + joint_vel(12) + actions(12) + base_lin_vel(3) = 50
 
-So: proprio_history = 47 × 6 = 282, proprio_current = 47, estimator_vel = 3.
+Mirrors HIMLoco's original obs design where history includes lin_vel as an
+auxiliary signal for the estimator encoder.
+
+So: proprio_history = 50 × 6 = 300, proprio_current = 50, estimator_vel = 3.
 """
 
 from __future__ import annotations
@@ -32,6 +35,8 @@ def _proprio_terms() -> dict[str, ObservationTermCfg]:
   """Boying proprioceptive single-step terms.
 
   Identical structure to Go2-HIM; noise scales match the base velocity task.
+  Includes base_lin_vel to mirror HIMLoco's original obs design, where the
+  encoder history contains true velocity as a supervision auxiliary signal.
   """
   return {
     "base_ang_vel": ObservationTermCfg(
@@ -60,6 +65,11 @@ def _proprio_terms() -> dict[str, ObservationTermCfg]:
       noise=Unoise(n_min=-1.5, n_max=1.5),
     ),
     "actions": ObservationTermCfg(func=mdp.last_action),
+    "base_lin_vel": ObservationTermCfg(
+      func=mdp.builtin_sensor,
+      params={"sensor_name": "robot/imu_lin_vel"},
+      noise=Unoise(n_min=-0.5, n_max=0.5),
+    ),
   }
 
 
