@@ -53,3 +53,18 @@ def phase(env: ManagerBasedRlEnv, period: float, command_name: str) -> torch.Ten
     phase = torch.where(stand_mask.unsqueeze(1), torch.zeros_like(phase), phase)
     return phase
 
+
+def generated_commands_scaled(
+    env: "ManagerBasedRlEnv",
+    command_name: str,
+    scale: tuple[float, ...] = (1.0,),
+) -> torch.Tensor:
+    """generated_commands with per-element scaling.
+
+    Mirrors HIMLoco's commands_scale=[lin_vel, lin_vel, ang_vel] = [2.0, 2.0, 0.25].
+    """
+    command = env.command_manager.get_command(command_name)
+    assert command is not None
+    scale_t = torch.tensor(scale, device=command.device, dtype=command.dtype)
+    return command * scale_t
+
