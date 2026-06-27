@@ -31,6 +31,8 @@ class TrainConfig:
   enable_nan_guard: bool = False
   torchrunx_log_dir: str | None = None
   gpu_ids: list[int] | Literal["all"] | None = field(default_factory=lambda: [0])
+  phase: bool = False
+  """Enable gait phase observation (sin/cos period 0.5s). Default: disabled."""
 
   @staticmethod
   def from_task(task_id: str) -> "TrainConfig":
@@ -193,6 +195,10 @@ def launch_training(task_id: str, args: TrainConfig | None = None):
 
 
 def main():
+  # Pre-scan --phase before importing src.tasks so MJLAB_PHASE_ENABLED is set
+  # when env_cfgs.py modules are first imported (module-level PHASE_ENABLED read).
+  os.environ["MJLAB_PHASE_ENABLED"] = "1" if "--phase" in sys.argv else "0"
+
   # Parse first argument to choose the task.
   # Import tasks to populate the registry.
   import mjlab.tasks  # noqa: F401
