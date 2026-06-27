@@ -29,7 +29,7 @@ def boying_him_ppo_runner_cfg() -> RslRlOnPolicyRunnerCfg:
     critic=RslRlModelCfg(
       hidden_dims=(512, 256, 128),
       activation="elu",
-      obs_normalization=True,
+      obs_normalization=False,  # HIMLoco: critic uses raw observations, no online normalization
     ),
     algorithm=HIMPpoAlgorithmCfg(
       value_loss_coef=1.0,
@@ -55,6 +55,6 @@ def boying_him_ppo_runner_cfg() -> RslRlOnPolicyRunnerCfg:
     experiment_name="boying_him_velocity",
     logger="tensorboard",
     save_interval=20,
-    num_steps_per_env=24,
-    max_iterations=20000,
+    num_steps_per_env=100,
+    max_iterations=200000,
   )
