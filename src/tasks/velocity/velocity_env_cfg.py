@@ -131,15 +131,17 @@ def make_velocity_env_cfg() -> ManagerBasedRlEnvCfg:
     "base_ang_vel": ObservationTermCfg(
       func=mdp.builtin_sensor,
       params={"sensor_name": "robot/imu_ang_vel"},
-      noise=Unoise(n_min=-0.2, n_max=0.2),
+      noise=Unoise(n_min=-0.05, n_max=0.05),
+      scale=0.25,
     ),
     "projected_gravity": ObservationTermCfg(
       func=mdp.projected_gravity,
       noise=Unoise(n_min=-0.05, n_max=0.05),
+      scale=1.0,
     ),
     "command": ObservationTermCfg(
-      func=mdp.generated_commands,
-      params={"command_name": "twist"},
+      func=mdp.generated_commands_scaled,
+      params={"command_name": "twist", "scale": (2.0, 2.0, 0.25)},
     ),
     "phase": ObservationTermCfg(
       func=mdp.phase,
@@ -148,12 +150,15 @@ def make_velocity_env_cfg() -> ManagerBasedRlEnvCfg:
     "joint_pos": ObservationTermCfg(
       func=mdp.joint_pos_rel,
       noise=Unoise(n_min=-0.01, n_max=0.01),
+      scale=1.0,
     ),
     "joint_vel": ObservationTermCfg(
       func=mdp.joint_vel_rel,
-      noise=Unoise(n_min=-1.5, n_max=1.5),
+      noise=Unoise(n_min=-0.075, n_max=0.075),
+      scale=0.05,
     ),
     "actions": ObservationTermCfg(func=mdp.last_action),
+    # height_scan present for non-HIM tasks (flat tasks delete it via del cfg.observations["actor"].terms["height_scan"])
     "height_scan": ObservationTermCfg(
       func=envs_mdp.height_scan,
       params={"sensor_name": "terrain_scan"},
@@ -163,17 +168,60 @@ def make_velocity_env_cfg() -> ManagerBasedRlEnvCfg:
   }
 
   critic_terms = {
-    **actor_terms,
+    # ── 45D proprio (same as actor, with scale) ──
+    "base_ang_vel": ObservationTermCfg(
+      func=mdp.builtin_sensor,
+      params={"sensor_name": "robot/imu_ang_vel"},
+      noise=Unoise(n_min=-0.05, n_max=0.05),
+      scale=0.25,
+    ),
+    "projected_gravity": ObservationTermCfg(
+      func=mdp.projected_gravity,
+      noise=Unoise(n_min=-0.05, n_max=0.05),
+      scale=1.0,
+    ),
+    "command": ObservationTermCfg(
+      func=mdp.generated_commands_scaled,
+      params={"command_name": "twist", "scale": (2.0, 2.0, 0.25)},
+    ),
+    "phase": ObservationTermCfg(
+      func=mdp.phase,
+      params={"period": 0.5, "command_name": "twist"},
+    ),
+    "joint_pos": ObservationTermCfg(
+      func=mdp.joint_pos_rel,
+      noise=Unoise(n_min=-0.01, n_max=0.01),
+      scale=1.0,
+    ),
+    "joint_vel": ObservationTermCfg(
+      func=mdp.joint_vel_rel,
+      noise=Unoise(n_min=-0.075, n_max=0.075),
+      scale=0.05,
+    ),
+    "actions": ObservationTermCfg(func=mdp.last_action),
+    # ── 3D lin_vel (privileged, HIMLoco ×2.0, noise±0.2) ──
     "base_lin_vel": ObservationTermCfg(
       func=mdp.builtin_sensor,
       params={"sensor_name": "robot/imu_lin_vel"},
-      noise=Unoise(n_min=-0.5, n_max=0.5),
+      noise=Unoise(n_min=-0.2, n_max=0.2),
+      scale=2.0,
     ),
+    # ── 3D ext_force (privileged, HIMLoco no scale) ──
+    "external_force": ObservationTermCfg(
+      func=mdp.external_body_force,
+      params={
+        "body_name": "base",
+        "asset_cfg": SceneEntityCfg("robot"),  # body_name set per-robot if needed
+      },
+    ),
+    # ── 187D height_scan (privileged, HIMLoco scale=5.0, noise±0.5) ──
     "height_scan": ObservationTermCfg(
       func=envs_mdp.height_scan,
       params={"sensor_name": "terrain_scan"},
-      scale=1 / terrain_scan.max_distance,
+      noise=Unoise(n_min=-0.5, n_max=0.5),
+      scale=5.0,
     ),
+    # ── foot observations (used by non-HIM tasks, overridden per-robot) ──
     "foot_height": ObservationTermCfg(
       func=mdp.foot_height,
       params={"asset_cfg": SceneEntityCfg("robot", site_names=())},  # Set per-robot.
