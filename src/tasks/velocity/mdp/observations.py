@@ -7,6 +7,7 @@ import torch
 from mjlab.entity import Entity
 from mjlab.managers.scene_entity_config import SceneEntityCfg
 from mjlab.sensor import ContactSensor
+from mjlab.utils.lab_api.math import quat_apply_inverse
 
 if TYPE_CHECKING:
   from mjlab.envs import ManagerBasedRlEnv
@@ -67,4 +68,27 @@ def generated_commands_scaled(
     assert command is not None
     scale_t = torch.tensor(scale, device=command.device, dtype=command.dtype)
     return command * scale_t
+
+
+def external_body_force(
+    env: "ManagerBasedRlEnv",
+    body_name: str = "base",
+    asset_cfg: SceneEntityCfg = _DEFAULT_ASSET_CFG,
+) -> torch.Tensor:
+    """External force applied to a body in the body's local frame.
+
+    Mirrors HIMLoco's self.disturbance[:, 0, :] which stores forces in
+    LOCAL_SPACE (body frame). Converts world-frame xfrc_applied to body frame
+    using the body's quaternion.
+
+    Returns shape [num_envs, 3].
+    """
+    asset: Entity = env.scene[asset_cfg.name]
+    body_ids, _ = asset.find_bodies(body_name)
+    # World-frame external force: [B, 1, 3]
+    force_w = asset.data.body_external_force[:, body_ids, :]
+    # Body quaternion in world frame: [B, 1, 4]
+    quat_w = asset.data.body_com_quat_w[:, body_ids, :]
+    # Rotate world force into body frame: [B, 3]
+    return quat_apply_inverse(quat_w.squeeze(1), force_w.squeeze(1))
 
