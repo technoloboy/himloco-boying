@@ -465,7 +465,7 @@ def make_velocity_env_cfg() -> ManagerBasedRlEnvCfg:
     ),
     "action_rate_l2": RewardTermCfg(func=mdp.action_rate_l2, weight=-0.01),
     "smoothness": RewardTermCfg(func=mdp.smoothness, weight=-0.01),
-    # --- Boying-specific rewards disabled for Go1 parity (kept for future toggle) ---
+    # weight=0 — kept for per-robot override (go2/a2/boying use pose/foot_slip)
     "pose": RewardTermCfg(
       func=mdp.variable_posture,
       weight=0.0,
@@ -477,6 +477,16 @@ def make_velocity_env_cfg() -> ManagerBasedRlEnvCfg:
         "std_running": {},   # Set per-robot.
         "walking_threshold": 0.1,
         "running_threshold": 1.5,
+      },
+    ),
+    "foot_slip": RewardTermCfg(
+      func=mdp.feet_slip,
+      weight=0.0,
+      params={
+        "sensor_name": "feet_ground_contact",
+        "command_name": "twist",
+        "command_threshold": 0.1,
+        "asset_cfg": SceneEntityCfg("robot", site_names=()),
       },
     ),
     "energy_efficiency": RewardTermCfg(
@@ -492,36 +502,6 @@ def make_velocity_env_cfg() -> ManagerBasedRlEnvCfg:
         "slip_scale": 0.5,
       },
     ),
-    "foot_slip": RewardTermCfg(
-      func=mdp.feet_slip,
-      weight=0.0,
-      params={
-        "sensor_name": "feet_ground_contact",
-        "command_name": "twist",
-        "command_threshold": 0.1,
-        "asset_cfg": SceneEntityCfg("robot", site_names=()),
-      },
-    ),
-    "soft_landing": RewardTermCfg(
-      func=mdp.soft_landing,
-      weight=0.0,
-      params={
-        "sensor_name": "feet_ground_contact",
-        "command_name": "twist",
-        "command_threshold": 0.1,
-      },
-    ),
-    "stand_still": RewardTermCfg(
-      func=mdp.stand_still,
-      weight=0.0,
-      params={
-        "command_name": "twist",
-        "command_threshold": 0.1,
-        "asset_cfg": SceneEntityCfg("robot", joint_names=".*"),
-      },
-    ),
-    "joint_pos_limits": RewardTermCfg(func=mdp.joint_pos_limits, weight=0.0),
-    "is_terminated": RewardTermCfg(func=mdp.is_terminated, weight=0.0),
   }
 
   ##
