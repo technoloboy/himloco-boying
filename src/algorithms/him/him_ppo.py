@@ -51,8 +51,20 @@ class HIMPPO(PPO):
   def process_env_step(
     self, obs: TensorDict, rewards: torch.Tensor, dones: torch.Tensor, extras: dict
   ) -> None:
-    # ``obs`` here is s_{t+1}. Record it as the transition's next observation.
-    self.transition.next_observations = obs
+    # ``obs`` here is s_{t+1} — but for terminated envs this is the POST-reset
+    # observation (history cleared, qpos randomized). To match HIMLoco's
+    # termination_privileged_obs semantics, replace terminated-env entries with
+    # the PRE-reset obs captured by the mjlab step() monkey-patch (train.py).
+    term_obs = extras.get("termination_obs")
+    term_ids = extras.get("termination_env_ids")
+    if term_obs is not None and term_ids is not None and len(term_ids) > 0:
+      next_obs = obs.clone()
+      for key, val in term_obs.items():
+        if key in next_obs.keys():
+          next_obs[key][term_ids] = val
+      self.transition.next_observations = next_obs
+    else:
+      self.transition.next_observations = obs
     super().process_env_step(obs, rewards, dones, extras)
 
   # Update ----------------------------------------------------------------

@@ -21,6 +21,76 @@ from mjlab.utils.torch import configure_torch_backends
 from mjlab.utils.wrappers import VideoRecorder
 
 
+def _patch_mjlab_termination_obs():
+  """Monkey-patch ManagerBasedRlEnv.step() to capture pre-reset obs.
+
+  Mirrors HIMLoco's termination_privileged_obs mechanism. The estimator
+  needs s_{t+1} BEFORE reset_idx() clears observation history. We snapshot
+  obs_manager.compute() right after termination is decided but BEFORE
+  _reset_idx is called, then inject into extras["termination_obs"] so
+  HIMPPO can patch transition.next_observations for terminated envs.
+
+  WARNING: this duplicates the body of ManagerBasedRlEnv.step(). If mjlab
+  upgrades the step() implementation, this patch must be re-aligned.
+  """
+  import mjlab.envs.manager_based_rl_env as _m
+
+  def patched_step(self, action: torch.Tensor):
+    self.action_manager.process_action(action.to(self.device))
+    for _ in range(self.cfg.decimation):
+      self.action_manager.apply_action()
+      self.scene.write_data_to_sim()
+      self.sim.step()
+      self.scene.update(dt=self.physics_dt)
+
+    self.episode_length_buf += 1
+    self.common_step_counter += 1
+
+    self.reset_terminated = self.termination_manager.compute()
+    self.reset_time_outs = self.termination_manager.time_outs
+    self.reset_buf = self.reset_terminated | self.reset_time_outs
+
+    # *** Capture obs BEFORE reset_idx — this is s_{t+1} for terminated envs ***
+    reset_env_ids = self.reset_buf.nonzero(as_tuple=False).squeeze(-1)
+    termination_obs_dict = None
+    if len(reset_env_ids) > 0:
+      self.sim.forward()
+      self.sim.sense()
+      termination_obs_full = self.observation_manager.compute(update_history=False)
+      termination_obs_dict = {
+        k: v[reset_env_ids].clone() for k, v in termination_obs_full.items()
+      }
+
+    self.reward_buf = self.reward_manager.compute(dt=self.step_dt)
+    self.extras["log"] = dict()
+    self.metrics_manager.compute(self.extras["log"])
+
+    if len(reset_env_ids) > 0:
+      self._reset_idx(reset_env_ids)
+      self.scene.write_data_to_sim()
+
+    self.sim.forward()
+    self.command_manager.compute(dt=self.step_dt)
+    self.event_manager.apply(
+      mode="interval", env_ids=None, dt=self.step_dt,
+      global_env_step_count=self.common_step_counter,
+    )
+    self.sim.sense()
+    self.obs_buf = self.observation_manager.compute(update_history=True)
+
+    if termination_obs_dict is not None:
+      self.extras["termination_obs"] = termination_obs_dict
+      self.extras["termination_env_ids"] = reset_env_ids
+
+    return (
+      self.obs_buf, self.reward_buf,
+      self.reset_terminated, self.reset_time_outs, self.extras,
+    )
+
+  _m.ManagerBasedRlEnv.step = patched_step
+  print("[patch] ManagerBasedRlEnv.step() patched for termination_obs", flush=True)
+
+
 class NaNGuardWrapper:
   """Wraps RslRlVecEnvWrapper to detect & force-reset envs with NaN physics state.
 
@@ -229,6 +299,9 @@ def launch_training(task_id: str, args: TrainConfig | None = None):
 
 
 def main():
+  # Apply mjlab termination_obs patch before any env construction.
+  _patch_mjlab_termination_obs()
+
   # Parse first argument to choose the task.
   # Import tasks to populate the registry.
   import mjlab.tasks  # noqa: F401
