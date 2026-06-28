@@ -191,10 +191,6 @@ def run_play_onnx(task_id: str, cfg: PlayOnnxConfig) -> None:
 
 
 def main() -> None:
-    # Pre-scan --phase before importing src.tasks (module-level PHASE_ENABLED read).
-    import os
-    os.environ["MJLAB_PHASE_ENABLED"] = "1" if "--phase" in sys.argv else "0"
-
     import mjlab.tasks  # noqa: F401 — populate task registry
     import src.tasks    # noqa: F401
 
@@ -207,8 +203,6 @@ def main() -> None:
         return_unknown_args=True,
         config=mjlab.TYRO_FLAGS,
     )
-
-    remaining_args = [a for a in remaining_args if a != "--phase"]
 
     args = tyro.cli(
         PlayOnnxConfig,

@@ -229,10 +229,6 @@ def launch_training(task_id: str, args: TrainConfig | None = None):
 
 
 def main():
-  # Pre-scan --phase before importing src.tasks so MJLAB_PHASE_ENABLED is set
-  # when env_cfgs.py modules are first imported (module-level PHASE_ENABLED read).
-  os.environ["MJLAB_PHASE_ENABLED"] = "1" if "--phase" in sys.argv else "0"
-
   # Parse first argument to choose the task.
   # Import tasks to populate the registry.
   import mjlab.tasks  # noqa: F401
@@ -245,10 +241,6 @@ def main():
     return_unknown_args=True,
     config=mjlab.TYRO_FLAGS,
   )
-
-  # Strip --phase from remaining_args — it was consumed by the pre-scan above
-  # and is not a tyro-registered field in TrainConfig.
-  remaining_args = [a for a in remaining_args if a != "--phase"]
 
   args = tyro.cli(
     TrainConfig,

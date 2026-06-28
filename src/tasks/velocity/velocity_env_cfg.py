@@ -58,7 +58,7 @@ _ROUGH_TERRAIN_CFG = TerrainGeneratorCfg(
       slope_range=(0.0, 0.4),
       platform_width=2.0,
       border_width=0.25,
-      horizontal_scale=0.15,
+      horizontal_scale=0.2,
     ),
     "hf_pyramid_slope_inv": HfPyramidSlopedTerrainCfg(
       proportion=0.1,
@@ -66,7 +66,7 @@ _ROUGH_TERRAIN_CFG = TerrainGeneratorCfg(
       platform_width=2.0,
       border_width=0.25,
       inverted=True,
-      horizontal_scale=0.15,
+      horizontal_scale=0.2,
     ),
     "pyramid_stairs": BoxPyramidStairsTerrainCfg(
       proportion=0.15,
@@ -88,17 +88,17 @@ _ROUGH_TERRAIN_CFG = TerrainGeneratorCfg(
       obstacle_width_range=(0.4, 0.8),
       num_obstacles=20,
       platform_width=1.0,
-      horizontal_scale=0.15,
+      horizontal_scale=0.2,
     ),
     "hf_perlin_noise": HfPerlinNoiseTerrainCfg(
       proportion=0.10,
       height_range=(0.0, 0.08),
-      horizontal_scale=0.15,
+      horizontal_scale=0.2,
     ),
     "hf_perlin_noise2": HfPerlinNoiseTerrainCfg(
       proportion=0.10,
       height_range=(0.0, 0.08),
-      horizontal_scale=0.15,
+      horizontal_scale=0.2,
     ),
   },
   add_lights=True,
@@ -143,10 +143,6 @@ def make_velocity_env_cfg() -> ManagerBasedRlEnvCfg:
       func=mdp.generated_commands_scaled,
       params={"command_name": "twist", "scale": (2.0, 2.0, 0.25)},
     ),
-    "phase": ObservationTermCfg(
-      func=mdp.phase,
-      params={"period": 0.5, "command_name": "twist"},
-    ),
     "joint_pos": ObservationTermCfg(
       func=mdp.joint_pos_rel,
       noise=Unoise(n_min=-0.01, n_max=0.01),
@@ -183,10 +179,6 @@ def make_velocity_env_cfg() -> ManagerBasedRlEnvCfg:
     "command": ObservationTermCfg(
       func=mdp.generated_commands_scaled,
       params={"command_name": "twist", "scale": (2.0, 2.0, 0.25)},
-    ),
-    "phase": ObservationTermCfg(
-      func=mdp.phase,
-      params={"period": 0.5, "command_name": "twist"},
     ),
     "joint_pos": ObservationTermCfg(
       func=mdp.joint_pos_rel,
@@ -246,14 +238,14 @@ def make_velocity_env_cfg() -> ManagerBasedRlEnvCfg:
       concatenate_terms=True,
       enable_corruption=True,
       history_length=1,
-      nan_policy="sanitize",  # hfield collision overflow guard
+      nan_policy="warn",  # hfield collision overflow guard
     ),
     "critic": ObservationGroupCfg(
       terms=critic_terms,
       concatenate_terms=True,
       enable_corruption=False,
       history_length=1,
-      nan_policy="sanitize",
+      nan_policy="warn",
     ),
   }
 
