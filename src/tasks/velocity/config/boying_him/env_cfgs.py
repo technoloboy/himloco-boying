@@ -158,6 +158,7 @@ def _him_observations(cfg: ManagerBasedRlEnvCfg, play: bool) -> dict:
       enable_corruption=not play,
       history_length=HISTORY_LENGTH,
       flatten_history_dim=True,
+      nan_policy="sanitize",  # hfield collision overflow guard
     ),
     "proprio_current": ObservationGroupCfg(
       terms=_proprio_terms(),
@@ -165,6 +166,7 @@ def _him_observations(cfg: ManagerBasedRlEnvCfg, play: bool) -> dict:
       enable_corruption=False,
       history_length=1,
       flatten_history_dim=True,
+      nan_policy="sanitize",
     ),
     "estimator_vel": ObservationGroupCfg(
       terms={
@@ -178,12 +180,14 @@ def _him_observations(cfg: ManagerBasedRlEnvCfg, play: bool) -> dict:
       enable_corruption=False,
       history_length=1,
       flatten_history_dim=True,
+      nan_policy="sanitize",
     ),
     "critic": ObservationGroupCfg(
       terms=him_critic_terms,
       concatenate_terms=True,
       enable_corruption=False,
       history_length=1,
+      nan_policy="sanitize",
     ),
   }
 
