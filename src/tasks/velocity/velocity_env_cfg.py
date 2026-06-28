@@ -246,12 +246,14 @@ def make_velocity_env_cfg() -> ManagerBasedRlEnvCfg:
       concatenate_terms=True,
       enable_corruption=True,
       history_length=1,
+      nan_policy="sanitize",  # hfield collision overflow guard
     ),
     "critic": ObservationGroupCfg(
       terms=critic_terms,
       concatenate_terms=True,
       enable_corruption=False,
       history_length=1,
+      nan_policy="sanitize",
     ),
   }
 
