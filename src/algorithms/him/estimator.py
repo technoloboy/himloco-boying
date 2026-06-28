@@ -142,12 +142,12 @@ class HIMEstimator(nn.Module):
       valid_mask: optional ``[B]`` (or ``[B,1]``) float/bool mask zeroing out
         transitions that crossed an episode boundary (where t+1 is from a fresh
         episode and the "successor" relationship is invalid).
-      lr: optional learning-rate override (kept in sync with PPO's adaptive lr).
+      lr: Deprecated, ignored. Estimator uses fixed LR from __init__ (HIMLoco parity).
     """
-    if lr is not None:
-      self.learning_rate = lr
-      for g in self.optimizer.param_groups:
-        g["lr"] = lr
+    # NOTE: lr parameter is intentionally ignored. HIMLoco's estimator uses a
+    # fixed 1e-3 LR independent of PPO's adaptive LR. Param kept for backward
+    # compatibility with old callers.
+    del lr
 
     obs_history = obs_history.detach()
     next_obs_frame = next_obs_frame.detach()
