@@ -8,6 +8,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Literal, cast
 
+import torch
 import tyro
 
 from mjlab.envs import ManagerBasedRlEnv, ManagerBasedRlEnvCfg
@@ -18,6 +19,40 @@ from mjlab.utils.gpu import select_gpus
 from mjlab.utils.os import dump_yaml, get_checkpoint_path
 from mjlab.utils.torch import configure_torch_backends
 from mjlab.utils.wrappers import VideoRecorder
+
+
+class NaNGuardWrapper:
+  """Wraps RslRlVecEnvWrapper to detect & force-reset envs with NaN physics state.
+
+  Reads robot.root_link_lin_vel_b after step() — if any env has NaN/inf or
+  unrealistic velocity (hfield collision overflow), force-reset that env to
+  clean qpos/qvel and mark dones=1 so PPO ignores the corrupted batch.
+  """
+
+  def __init__(self, env):
+    self.env = env
+    self._unwrapped = env.unwrapped
+    self._asset = self._unwrapped.scene["robot"]
+
+  def __getattr__(self, name):
+    # Forward all other attrs to wrapped env (after self.env is set in __init__).
+    if name in ("env", "_unwrapped", "_asset"):
+      raise AttributeError(name)
+    return getattr(self.env, name)
+
+  def step(self, actions):
+    obs, rew, dones, extras = self.env.step(actions)
+    lin_vel = self._asset.data.root_link_lin_vel_b  # [N, 3]
+    bad = (~torch.isfinite(lin_vel).all(dim=-1)) | (lin_vel.norm(dim=-1) > 50.0)
+    if bad.any():
+      bad_ids = torch.nonzero(bad, as_tuple=False).flatten().to(dtype=torch.int32)
+      print(f"[NaNGuard] resetting {bad_ids.numel()} envs with NaN/extreme physics", flush=True)
+      self._unwrapped.reset(env_ids=bad_ids)
+      dones = dones.clone()
+      dones[bad_ids.long()] = 1
+      rew = rew.clone()
+      rew[bad_ids.long()] = 0.0
+    return obs, rew, dones, extras
 
 
 @dataclass(frozen=True)
@@ -114,6 +149,7 @@ def run_train(task_id: str, cfg: TrainConfig, log_dir: Path) -> None:
     print("[INFO] Recording videos during training.")
 
   env = RslRlVecEnvWrapper(env, clip_actions=cfg.agent.clip_actions)
+  env = NaNGuardWrapper(env)
 
   agent_cfg = asdict(cfg.agent)
   env_cfg = asdict(cfg.env)
