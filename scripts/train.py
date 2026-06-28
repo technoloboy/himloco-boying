@@ -38,6 +38,7 @@ def _patch_mjlab_termination_obs():
   def patched_step(self, action: torch.Tensor):
     self.action_manager.process_action(action.to(self.device))
     for _ in range(self.cfg.decimation):
+      self._sim_step_counter += 1
       self.action_manager.apply_action()
       self.scene.write_data_to_sim()
       self.sim.step()
@@ -46,14 +47,18 @@ def _patch_mjlab_termination_obs():
     self.episode_length_buf += 1
     self.common_step_counter += 1
 
-    self.reset_terminated = self.termination_manager.compute()
+    self.reset_buf = self.termination_manager.compute()
+    self.reset_terminated = self.termination_manager.terminated
     self.reset_time_outs = self.termination_manager.time_outs
-    self.reset_buf = self.reset_terminated | self.reset_time_outs
+
+    self.reward_buf = self.reward_manager.compute(dt=self.step_dt)
+    self.metrics_manager.compute()
 
     # *** Capture obs BEFORE reset_idx — this is s_{t+1} for terminated envs ***
     reset_env_ids = self.reset_buf.nonzero(as_tuple=False).squeeze(-1)
     termination_obs_dict = None
     if len(reset_env_ids) > 0:
+      # Refresh derived quantities so obs reflects post-physics terminal state
       self.sim.forward()
       self.sim.sense()
       termination_obs_full = self.observation_manager.compute(update_history=False)
@@ -61,20 +66,17 @@ def _patch_mjlab_termination_obs():
         k: v[reset_env_ids].clone() for k, v in termination_obs_full.items()
       }
 
-    self.reward_buf = self.reward_manager.compute(dt=self.step_dt)
-    self.extras["log"] = dict()
-    self.metrics_manager.compute(self.extras["log"])
-
-    if len(reset_env_ids) > 0:
       self._reset_idx(reset_env_ids)
       self.scene.write_data_to_sim()
 
     self.sim.forward()
     self.command_manager.compute(dt=self.step_dt)
-    self.event_manager.apply(
-      mode="interval", env_ids=None, dt=self.step_dt,
-      global_env_step_count=self.common_step_counter,
-    )
+
+    if "step" in self.event_manager.available_modes:
+      self.event_manager.apply(mode="step", dt=self.step_dt)
+    if "interval" in self.event_manager.available_modes:
+      self.event_manager.apply(mode="interval", dt=self.step_dt)
+
     self.sim.sense()
     self.obs_buf = self.observation_manager.compute(update_history=True)
 
