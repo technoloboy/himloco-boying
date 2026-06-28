@@ -594,7 +594,7 @@ HIMLoco 项目整体介绍
 
 训练
 # 粗糙地形（推荐，对应 Boying-HIM-Rough）
-python scripts/train.py Boying-HIM-Rough --env.scene.num-envs=4096
+python scripts/train.py Boying-HIM-Rough --env.scene.num-envs=4096 --phase
 
 # 平地
 python scripts/train.py Boying-HIM-Flat --env.scene.num-envs=4096
@@ -623,5 +623,38 @@ python export_him_onnx.py --checkpoint logs/rsl_rl/boying_him_velocity/2026-06-2
  python scripts/play_keyboard.py Boying-HIM-Rough \
      --checkpoint_file=logs/rsl_rl/boying_him_velocity/2026-06-26_14-45-58/model_9380.pt 
 
+=============================修改===========================
+============================修改后===========================                                                                                                                                                                             
+  # 标准训练（与 HIMLoco Go1 完全对齐）                                                                                                                                            
+  python scripts/train.py Boying-HIM-Rough --env.scene.num-envs=4096                                                                                                               
+                                                                                                                                                                                   
+  # 启用步态相位                                                                                                                                                                   
+  python scripts/train.py Boying-HIM-Rough --env.scene.num-envs=4096 --phase                                                                                                                                         
+                                                                                                                                                                                   
+  ---                                                                                                                                                                              
+  三个脚本的变更说明：                                                                                                                                                             
+                                                                                                                                                                                   
+  export_him_onnx.py — 只更新了顶部注释（维度从旧的 50/300 改为 45/270），逻辑本身不需要改，因为 infer_dims() 从 checkpoint 权重形状自动推断。                                   
+                                                                                                                                                                                   
+  play_keyboard.py — 加了 --phase: bool = False 参数和 os.environ["MJLAB_PHASE_ENABLED"] 预注入，确保 play 时环境的 obs 维度与训练时一致。                                         
+                                                                                                                                                                                   
+  play_onnx.py — 同上，加了 --phase 参数和环境变量注入，ONNX 的实际输入维度从 ONNX 元数据自动读取，环境变量只影响 mjlab env 的 obs 构建。                                          
+                                                                                                                                                                                 
+  play 命令示例：                                                                                                                                                                  
+  # 用 checkpoint 直接 play                                                                                                                                                      
+  conda run -n unitree_rl_mjlab_boying python scripts/play_keyboard.py \                                                                                                           
+    Boying-HIM-Rough --checkpoint_file logs/rsl_rl/boying_him_velocity/XXXX/model_1000.pt                                                                                          
+                                                                                                                                                                                   
+  # 导出 ONNX                                                                                                                                                                      
+  conda run -n unitree_rl_mjlab_boying python export_him_onnx.py \                                                                                                                 
+    --checkpoint logs/rsl_rl/boying_him_velocity/XXXX/model_1000.pt                                                                                                                
+                                                                                                                                                                                   
+  # 用 ONNX play                                                                                                                                                                   
+  conda run -n unitree_rl_mjlab_boying python scripts/play_onnx.py \                                                                                                               
+    Boying-HIM-Rough --onnx_file logs/rsl_rl/boying_him_velocity/XXXX/policy_1000.onnx 
 
-现在根据源码分析奖励配置'/home/wkl/Desktop/himloco-by/himloco-boying'中的Boying-HIM-Rough任务的奖励配置,和'/home/wkl/Desktop/himloco-by/HIMLoco'中的奖励配置有什么相同之处和不同之处?请通过源码详细对比分析,并且解释                                                      
+
+tensorboard --logdir logs/rsl_rl/boying_him_velocity
+
+
+开始修复：BUG #1（严重）next_obs 跨 episode 边界污染问题：对齐 HIMLoco 原始处理；BUG #2（中度）Actor 输入包含 phase，破坏与 HIMLoco 的网络对齐：完全对齐 HIMLoco，不再要phase，不再是可选项； BUG #3（中度）return clamp ±10 数学矛盾： 移除 clamp，对齐HIMLoco； BUG #4（中度）estimator.parameters() 被 combined grad clip 重复处理：对齐HIMLoco；BUG #5（中度）nan_policy="sanitize" 让网络学到虚假的"全 0"信号：根本修复： 改用 nan_policy="warn" 用于调试 ，调整 hfield 碰撞参数（horizontal_scale 增大、nconmax 增大）；BUG #6（轻度）estimator LR 与 PPO adaptive LR 同步：完全对齐HIMLoco设计； BUG #7（轻度）critic obs_normalization=False + 维度尺度差异：对齐HIMLoco 也 disable normalization，但其 obs 维度经过精心 obs_scales 调整都在 [-1, 1]。

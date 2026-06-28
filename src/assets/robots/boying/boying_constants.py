@@ -4,11 +4,11 @@ from pathlib import Path
 
 import mujoco
 
-from src import SRC_PATH
-from mjlab.actuator import BuiltinPositionActuatorCfg
-from mjlab.entity import EntityArticulationInfoCfg, EntityCfg
-from mjlab.utils.os import update_assets
-from mjlab.utils.spec_config import CollisionCfg
+from src import SRC_PATH  # 项目源码根路径，用于定位MJCF模型文件
+from mjlab.actuator import BuiltinPositionActuatorCfg  # MuJoCo内置位置控制器配置，支持PD增益和力矩限制
+from mjlab.entity import EntityArticulationInfoCfg, EntityCfg  # 实体配置：EntityCfg定义机器人初始状态/碰撞/规格，EntityArticulationInfoCfg配置关节驱动器
+from mjlab.utils.os import update_assets  # 更新资源字典，将mesh/texture等文件读入字节流
+from mjlab.utils.spec_config import CollisionCfg  # 碰撞检测配置，控制geom碰撞类型、优先级、摩擦系数等
 
 ##
 # MJCF and assets.

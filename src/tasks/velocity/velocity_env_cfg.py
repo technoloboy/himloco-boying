@@ -7,36 +7,36 @@ Robot-specific configurations call the factory and customize as needed.
 import math
 from dataclasses import replace
 
-from mjlab.envs import ManagerBasedRlEnvCfg
-from mjlab.envs import mdp as envs_mdp
-from mjlab.envs.mdp import dr
-from mjlab.envs.mdp.actions import JointPositionActionCfg
-from mjlab.managers.action_manager import ActionTermCfg
-from mjlab.managers.command_manager import CommandTermCfg
-from mjlab.managers.curriculum_manager import CurriculumTermCfg
-from mjlab.managers.event_manager import EventTermCfg
-from mjlab.managers.metrics_manager import MetricsTermCfg
-from mjlab.managers.observation_manager import ObservationGroupCfg, ObservationTermCfg
-from mjlab.managers.reward_manager import RewardTermCfg
-from mjlab.managers.scene_entity_config import SceneEntityCfg
-from mjlab.managers.termination_manager import TerminationTermCfg
-from mjlab.scene import SceneCfg
-from mjlab.sensor import GridPatternCfg, ObjRef, RayCastSensorCfg
-from mjlab.sim import MujocoCfg, SimulationCfg
-from mjlab.tasks.velocity import mdp
-from mjlab.tasks.velocity.mdp import UniformVelocityCommandCfg
+from mjlab.envs import ManagerBasedRlEnvCfg  # 基于管理器的RL环境配置类，定义整个环境结构
+from mjlab.envs import mdp as envs_mdp  # 环境内置的MDP模块（动作、观测等）
+from mjlab.envs.mdp import dr  # 数据随机化模块（对传感器等添加噪声）
+from mjlab.envs.mdp.actions import JointPositionActionCfg  # 关节位置动作配置
+from mjlab.managers.action_manager import ActionTermCfg  # 动作项配置，定义动作空间
+from mjlab.managers.command_manager import CommandTermCfg  # 命令项配置（如速度指令）
+from mjlab.managers.curriculum_manager import CurriculumTermCfg  # 课程学习项配置（难度递增）
+from mjlab.managers.event_manager import EventTermCfg  # 事件项配置（如重置、随机扰动）
+from mjlab.managers.metrics_manager import MetricsTermCfg  # 指标项配置（用于评估训练效果）
+from mjlab.managers.observation_manager import ObservationGroupCfg, ObservationTermCfg  # 观测组/项配置
+from mjlab.managers.reward_manager import RewardTermCfg  # 奖励项配置（定义奖励函数）
+from mjlab.managers.scene_entity_config import SceneEntityCfg  # 场景实体配置（指定实体名称和site ID）
+from mjlab.managers.termination_manager import TerminationTermCfg  # 终止项配置（定义episode结束条件）
+from mjlab.scene import SceneCfg  # 场景配置（包含机器人、地形、传感器等）
+from mjlab.sensor import GridPatternCfg, ObjRef, RayCastSensorCfg  # 传感器配置（网格模式、物体参考、射线投射）
+from mjlab.sim import MujocoCfg, SimulationCfg  # MuJoCo仿真配置和通用仿真配置
+from mjlab.tasks.velocity import mdp  # 速度任务的MDP模块（奖励、观测、命令等）
+from mjlab.tasks.velocity.mdp import UniformVelocityCommandCfg  # 均匀速度命令配置（随机生成速度指令）
 from mjlab.terrains import (
-  TerrainEntityCfg,
-  TerrainGeneratorCfg,
-  BoxFlatTerrainCfg,
-  BoxPyramidStairsTerrainCfg,
-  BoxInvertedPyramidStairsTerrainCfg,
-  HfPyramidSlopedTerrainCfg,
-  HfPerlinNoiseTerrainCfg,
-  HfDiscreteObstaclesTerrainCfg,
+  TerrainEntityCfg,  # 地形实体配置
+  TerrainGeneratorCfg,  # 地形生成器配置（组合多种地形）
+  BoxFlatTerrainCfg,  # 平坦地形配置
+  BoxPyramidStairsTerrainCfg,  # 金字塔阶梯地形配置
+  BoxInvertedPyramidStairsTerrainCfg,  # 倒金字塔阶梯地形配置
+  HfPyramidSlopedTerrainCfg,  # 金字塔斜坡地形配置（高度场）
+  HfPerlinNoiseTerrainCfg,  # Perlin噪声地形配置（高度场）
+  HfDiscreteObstaclesTerrainCfg,  # 离散障碍物地形配置（高度场）
 )
-from mjlab.utils.noise import UniformNoiseCfg as Unoise
-from mjlab.viewer import ViewerConfig
+from mjlab.utils.noise import UniformNoiseCfg as Unoise  # 均匀噪声配置（添加到观测/动作）
+from mjlab.viewer import ViewerConfig  # 查看器配置（分辨率、帧率等）
 
 import src.tasks.velocity.mdp as mdp
 

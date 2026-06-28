@@ -4,10 +4,10 @@ from typing import TYPE_CHECKING
 
 import torch
 
-from mjlab.entity import Entity
-from mjlab.managers.scene_entity_config import SceneEntityCfg
-from mjlab.sensor import ContactSensor
-from mjlab.utils.lab_api.math import quat_apply_inverse
+from mjlab.entity import Entity  # 实体类，用于访问机器人的关节、传感器、位姿等数据
+from mjlab.managers.scene_entity_config import SceneEntityCfg  # 场景实体配置，指定要查询的实体名称和site ID
+from mjlab.sensor import ContactSensor  # 接触传感器，获取脚部与地面的接触状态、接触力、空中时间等
+from mjlab.utils.lab_api.math import quat_apply_inverse  # 四元数逆旋转，将世界坐标系向量转换到物体局部坐标系
 
 if TYPE_CHECKING:
   from mjlab.envs import ManagerBasedRlEnv

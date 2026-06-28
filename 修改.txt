@@ -1,3 +1,0 @@
-奖励权重修改
-  - track_linear_velocity weight: 1.0 → 1.5                                                                                                                             
-  - foot_clearance weight: -1.0 → -0.5 
