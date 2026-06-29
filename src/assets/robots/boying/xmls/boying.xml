@@ -74,7 +74,6 @@
           <joint name="FL_thigh_joint" pos="0 0 0" axis="0 1 0" range="-0.175 4.712"/>
           <geom class="visual" rgba="0.86667 0.9098 1 1" mesh="L_thigh"/>
           <geom name="FL_thigh1_collision" class="collision" size="0.044 0.0545"   pos="0 0.0875 0"              quat="0.707107 0.707107 0 0"      type="cylinder" rgba="0.86667 0.9098 1 1"/>
-          <geom name="FL_thigh4_collision" class="collision" size="0.030 0.04837"  pos="-0.010 0.080 0.0055"  quat="0.7378 -0.6647 -0.1414 0"           type="cylinder" rgba="0.86667 0.9098 1 1"/>
           <geom name="FL_thigh2_collision" class="collision" size="0.022 0.106574" pos="-0.020000 0.127000 -0.095650"                                   type="cylinder" rgba="0.86667 0.9098 1 1"/>
           <geom name="FL_thigh3_collision" class="collision" size="0.025 0.0275"   pos="-0.006 0.127 -0.219"  quat="0.973894 0 -0.227004 0"             type="cylinder" rgba="0.86667 0.9098 1 1"/>
           <body name="FL_calf" pos="0 0.1267 -0.235" quat="0.894493 0 0.447082 0">
@@ -84,7 +83,7 @@
             <geom class="visual" rgba="0.29804 0.29804 0.29804 1" mesh="L_foot"/>
             <geom name="FL_calf1_collision" class="collision" size="0.015 0.048837"  pos="0.050640 0 -0.025016" quat="0.598872 0 0.800845 0"   type="cylinder" rgba="0.86667 0.9098 1 1"/>
             <geom name="FL_calf2_collision" class="collision" size="0.014 0.036148"  pos="0.128041 0 -0.058136" quat="0.482546 0 0.875871 0"   type="cylinder" rgba="0.86667 0.9098 1 1"/>
-            <geom name="FL_calf3_collision" class="collision" size="0.0135 0.020469" pos="0.170272 0 -0.094263" quat="0.298847 0 0.954301 0"   type="cylinder" rgba="0.86667 0.9098 1 1"/>
+            <geom name="FL_calf3_collision" class="collision" size="0.013 0.016670"   pos="0.164320 0 -0.093106" quat="0.174336 0 0.984686 0"    type="cylinder" rgba="0.86667 0.9098 1 1"/>
             <geom name="FL_foot_collision"  class="collision" size="0.025"        pos="0.18 0 -0.136"    rgba="0.29804 0.29804 0.29804 1" priority="1" condim="6" friction="0.6 0.02 0.01"/>
             <site name="FL" pos="0.18 0 -0.136" type="sphere" size="0.025" group="5"/>
           </body>
@@ -102,7 +101,6 @@
           <joint name="FR_thigh_joint" pos="0 0 0" axis="0 1 0" range="-0.175 4.712"/>
           <geom class="visual" rgba="1 1 1 1" mesh="R_thigh"/>
           <geom name="FR_thigh1_collision" class="collision" size="0.044 0.0545"   pos="0 -0.0875 0"             quat="0.707107 0.707107 0 0"      type="cylinder" rgba="1 1 1 1"/>
-          <geom name="FR_thigh4_collision" class="collision" size="0.030 0.04837"  pos="-0.010 -0.080 0.0055" quat="0.7378 0.6647 -0.1414 0"            type="cylinder" rgba="1 1 1 1"/>
           <geom name="FR_thigh2_collision" class="collision" size="0.022 0.106574" pos="-0.020000 -0.127000 -0.095650"                                  type="cylinder" rgba="1 1 1 1"/>
           <geom name="FR_thigh3_collision" class="collision" size="0.025 0.0275"   pos="-0.006 -0.127 -0.219" quat="0.973894 0 -0.227004 0"             type="cylinder" rgba="1 1 1 1"/>
           <body name="FR_calf" pos="0 -0.1267 -0.235" quat="0.894493 0 0.447082 0">
@@ -112,7 +110,7 @@
             <geom class="visual" rgba="0.29804 0.29804 0.29804 1" mesh="R_foot"/>
             <geom name="FR_calf1_collision" class="collision" size="0.015 0.048837"  pos="0.050640 0 -0.025016" quat="0.598872 0 0.800845 0"   type="cylinder" rgba="1 1 1 1"/>
             <geom name="FR_calf2_collision" class="collision" size="0.014 0.036148"  pos="0.128041 0 -0.058136" quat="0.482546 0 0.875871 0"   type="cylinder" rgba="1 1 1 1"/>
-            <geom name="FR_calf3_collision" class="collision" size="0.0135 0.020469" pos="0.170272 0 -0.094263" quat="0.298847 0 0.954301 0"   type="cylinder" rgba="1 1 1 1"/>
+            <geom name="FR_calf3_collision" class="collision" size="0.013 0.016670"   pos="0.164320 0 -0.093106" quat="0.174336 0 0.984686 0"    type="cylinder" rgba="1 1 1 1"/>
             <geom name="FR_foot_collision"  class="collision" size="0.025"        pos="0.18 0 -0.136"    rgba="0.29804 0.29804 0.29804 1" priority="1" condim="6" friction="0.6 0.02 0.01"/>
             <site name="FR" pos="0.18 0 -0.136" type="sphere" size="0.025" group="5"/>
           </body>
@@ -130,7 +128,6 @@
           <joint name="RL_thigh_joint" pos="0 0 0" axis="0 1 0" range="-0.175 4.712"/>
           <geom class="visual" rgba="0.86667 0.9098 1 1" mesh="L_thigh"/>
           <geom name="RL_thigh1_collision" class="collision" size="0.044 0.0545"   pos="0 0.0875 0"              quat="0.707107 0.707107 0 0"      type="cylinder" rgba="0.86667 0.9098 1 1"/>
-          <geom name="RL_thigh4_collision" class="collision" size="0.030 0.04837"  pos="-0.010 0.080 0.0055"  quat="0.7378 -0.6647 -0.1414 0"           type="cylinder" rgba="0.86667 0.9098 1 1"/>
           <geom name="RL_thigh2_collision" class="collision" size="0.022 0.106574" pos="-0.020000 0.127000 -0.095650"                                   type="cylinder" rgba="0.86667 0.9098 1 1"/>
           <geom name="RL_thigh3_collision" class="collision" size="0.025 0.0275"   pos="-0.006 0.127 -0.219"  quat="0.973894 0 -0.227004 0"             type="cylinder" rgba="0.86667 0.9098 1 1"/>
           <body name="RL_calf" pos="0 0.1267 -0.235" quat="0.894493 0 0.447082 0">
@@ -140,7 +137,7 @@
             <geom class="visual" rgba="0.29804 0.29804 0.29804 1" mesh="L_foot"/>
             <geom name="RL_calf1_collision" class="collision" size="0.015 0.048837"  pos="0.050640 0 -0.025016" quat="0.598872 0 0.800845 0"   type="cylinder" rgba="0.86667 0.9098 1 1"/>
             <geom name="RL_calf2_collision" class="collision" size="0.014 0.036148"  pos="0.128041 0 -0.058136" quat="0.482546 0 0.875871 0"   type="cylinder" rgba="0.86667 0.9098 1 1"/>
-            <geom name="RL_calf3_collision" class="collision" size="0.0135 0.020469" pos="0.170272 0 -0.094263" quat="0.298847 0 0.954301 0"   type="cylinder" rgba="0.86667 0.9098 1 1"/>
+            <geom name="RL_calf3_collision" class="collision" size="0.013 0.016670"   pos="0.164320 0 -0.093106" quat="0.174336 0 0.984686 0"    type="cylinder" rgba="0.86667 0.9098 1 1"/>
             <geom name="RL_foot_collision"  class="collision" size="0.025"        pos="0.18 0 -0.136"    rgba="0.29804 0.29804 0.29804 1" priority="1" condim="6" friction="0.6 0.02 0.01"/>
             <site name="RL" pos="0.18 0 -0.136" type="sphere" size="0.025" group="5"/>
           </body>
@@ -158,7 +155,6 @@
           <joint name="RR_thigh_joint" pos="0 0 0" axis="0 1 0" range="-0.175 4.712"/>
           <geom class="visual" rgba="1 1 1 1" mesh="R_thigh"/>
           <geom name="RR_thigh1_collision" class="collision" size="0.044 0.0545"   pos="0 -0.0875 0"             quat="0.707107 0.707107 0 0"      type="cylinder" rgba="1 1 1 1"/>
-          <geom name="RR_thigh4_collision" class="collision" size="0.030 0.04837"  pos="-0.010 -0.080 0.0055" quat="0.7378 0.6647 -0.1414 0"            type="cylinder" rgba="1 1 1 1"/>
           <geom name="RR_thigh2_collision" class="collision" size="0.022 0.106574" pos="-0.020000 -0.127000 -0.095650"                                  type="cylinder" rgba="1 1 1 1"/>
           <geom name="RR_thigh3_collision" class="collision" size="0.025 0.0275"   pos="-0.006 -0.127 -0.219" quat="0.973894 0 -0.227004 0"             type="cylinder" rgba="1 1 1 1"/>
           <body name="RR_calf" pos="0 -0.1267 -0.235" quat="0.894493 0 0.447082 0">
@@ -168,7 +164,7 @@
             <geom class="visual" rgba="0.29804 0.29804 0.29804 1" mesh="R_foot"/>
             <geom name="RR_calf1_collision" class="collision" size="0.015 0.048837"  pos="0.050640 0 -0.025016" quat="0.598872 0 0.800845 0"   type="cylinder" rgba="1 1 1 1"/>
             <geom name="RR_calf2_collision" class="collision" size="0.014 0.036148"  pos="0.128041 0 -0.058136" quat="0.482546 0 0.875871 0"   type="cylinder" rgba="1 1 1 1"/>
-            <geom name="RR_calf3_collision" class="collision" size="0.0135 0.020469" pos="0.170272 0 -0.094263" quat="0.298847 0 0.954301 0"   type="cylinder" rgba="1 1 1 1"/>
+            <geom name="RR_calf3_collision" class="collision" size="0.013 0.016670"   pos="0.164320 0 -0.093106" quat="0.174336 0 0.984686 0"    type="cylinder" rgba="1 1 1 1"/>
             <geom name="RR_foot_collision"  class="collision" size="0.025"        pos="0.18 0 -0.136"    rgba="0.29804 0.29804 0.29804 1" priority="1" condim="6" friction="0.6 0.02 0.01"/>
             <site name="RR" pos="0.18 0 -0.136" type="sphere" size="0.025" group="5"/>
           </body>
