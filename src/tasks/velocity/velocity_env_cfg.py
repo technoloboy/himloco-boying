@@ -461,7 +461,7 @@ def make_velocity_env_cfg() -> ManagerBasedRlEnvCfg:
     "smoothness": RewardTermCfg(func=mdp.smoothness, weight=-0.01),
     "hip_joint_deviation": RewardTermCfg(
       func=mdp.hip_joint_deviation_l2,
-      weight=-0.05,  # Mild hip adduction penalty (Walk-These-Ways inspired)
+      weight=-0.15,  # was -0.05, increased to stronger constrain hip adduction
       params={
         "asset_cfg": SceneEntityCfg("robot", joint_names=(".*_hip_joint",)),
       },
