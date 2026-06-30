@@ -458,6 +458,7 @@ def make_velocity_env_cfg() -> ManagerBasedRlEnvCfg:
       },
     ),
     "action_rate_l2": RewardTermCfg(func=mdp.action_rate_l2, weight=-0.01),
+    "action_symmetry_l2": RewardTermCfg(func=mdp.action_symmetry_l2, weight=-0.02),
     "smoothness": RewardTermCfg(func=mdp.smoothness, weight=-0.01),
     "hip_joint_deviation": RewardTermCfg(
       func=mdp.hip_joint_deviation_l2,

@@ -575,3 +575,26 @@ def hip_joint_deviation_l2(
     deviation = current_pos - default_pos                                  # [B, N_hip]
     return torch.sum(torch.square(deviation), dim=1)                       # [B]
 
+
+def action_symmetry_l2(env: ManagerBasedRlEnv) -> torch.Tensor:
+  """Penalize left-right action asymmetry (bilateral symmetry: FL↔FR, RL↔RR).
+
+  Hip abduction actions have opposite signs for left vs right legs;
+  thigh and calf actions should match.
+
+  Joint index layout (FL→FR→RL→RR, hip→thigh→calf per leg):
+    FL: 0,1,2  FR: 3,4,5  RL: 6,7,8  RR: 9,10,11
+  """
+  a = env.action_manager.action  # [B, 12]
+  # hip pairs: opposite signs → penalise (a_L + a_R)²
+  # thigh/calf pairs: same sign → penalise (a_L - a_R)²
+  error = (
+    (a[:, 0] + a[:, 3]) ** 2    # FL_hip + FR_hip
+    + (a[:, 1] - a[:, 4]) ** 2  # FL_thigh - FR_thigh
+    + (a[:, 2] - a[:, 5]) ** 2  # FL_calf - FR_calf
+    + (a[:, 6] + a[:, 9]) ** 2  # RL_hip + RR_hip
+    + (a[:, 7] - a[:, 10]) ** 2 # RL_thigh - RR_thigh
+    + (a[:, 8] - a[:, 11]) ** 2 # RL_calf - RR_calf
+  ) / 12.0
+  return error
+
