@@ -617,3 +617,173 @@ def action_symmetry_l2(env: ManagerBasedRlEnv) -> torch.Tensor:
   ) / 12.0
   return error
 
+
+# =============================================================================
+# MoE-CTS-inspired terms (RSS 2026, go2_rl_robotlab) for Boying obstacle traversal
+# =============================================================================
+
+
+def _upright_gate(env: "ManagerBasedRlEnv", asset_cfg: SceneEntityCfg) -> torch.Tensor:
+  """Uprightness gate in [0, 1] (MoE-CTS trick).
+
+  Returns clamp(-projected_gravity_z, 0, 0.7) / 0.7. Upright robot → gravity_z≈-1
+  → gate≈1 (penalty full strength). Tipping/fallen robot → gravity_z→0 or positive
+  → gate→0 (penalty vanishes). Multiplying penalty terms by this gate removes the
+  huge gradient spike at the moment of falling, which destabilises training.
+  """
+  g_z = env.scene[asset_cfg.name].data.projected_gravity_b[:, 2]  # [B]
+  return torch.clamp(-g_z, 0.0, 0.7) / 0.7
+
+
+def _terrain_relative_base_height(
+  env: "ManagerBasedRlEnv",
+  sensor_name: str | None,
+  asset_cfg: SceneEntityCfg,
+) -> torch.Tensor:
+  """Base height relative to terrain beneath the robot (or absolute if no sensor)."""
+  asset: Entity = env.scene[asset_cfg.name]
+  base_z = asset.data.root_link_pos_w[:, 2]
+  if sensor_name is None:
+    return base_z
+  sensor = env.scene[sensor_name]
+  hit_z = sensor.data.hit_pos_w[..., 2]  # [B, N]
+  valid = sensor.data.distances >= 0
+  valid_f = valid.float()
+  denom = valid_f.sum(dim=1).clamp(min=1.0)
+  terrain_z = (hit_z * valid_f).sum(dim=1) / denom
+  return base_z - terrain_z
+
+
+def lin_vel_z_l2_gated(
+  env: "ManagerBasedRlEnv",
+  asset_cfg: SceneEntityCfg = _DEFAULT_ASSET_CFG,
+) -> torch.Tensor:
+  """lin_vel_z_l2 multiplied by the uprightness gate."""
+  asset: Entity = env.scene[asset_cfg.name]
+  cost = torch.square(asset.data.root_link_lin_vel_b[:, 2])
+  return cost * _upright_gate(env, asset_cfg)
+
+
+def body_orientation_l2_gated(
+  env: "ManagerBasedRlEnv",
+  asset_cfg: SceneEntityCfg = _DEFAULT_ASSET_CFG,
+) -> torch.Tensor:
+  """body_orientation_l2 multiplied by the uprightness gate."""
+  asset: Entity = env.scene[asset_cfg.name]
+  if asset_cfg.body_ids:
+    body_quat_w = asset.data.body_link_quat_w[:, asset_cfg.body_ids, :].squeeze(1)
+    gravity_w = asset.data.gravity_vec_w
+    projected_gravity_b = quat_apply_inverse(body_quat_w, gravity_w)
+    xy_squared = torch.sum(torch.square(projected_gravity_b[:, :2]), dim=1)
+  else:
+    xy_squared = torch.sum(
+      torch.square(asset.data.projected_gravity_b[:, :2]), dim=1
+    )
+  return xy_squared * _upright_gate(env, asset_cfg)
+
+
+def body_angular_velocity_penalty_gated(
+  env: "ManagerBasedRlEnv",
+  asset_cfg: SceneEntityCfg = _DEFAULT_ASSET_CFG,
+) -> torch.Tensor:
+  """body_angular_velocity_penalty multiplied by the uprightness gate."""
+  asset: Entity = env.scene[asset_cfg.name]
+  ang_vel = asset.data.body_link_ang_vel_w[:, asset_cfg.body_ids, :].squeeze(1)
+  cost = torch.sum(torch.square(ang_vel[:, :2]), dim=1)
+  return cost * _upright_gate(env, asset_cfg)
+
+
+def feet_regulation(
+  env: "ManagerBasedRlEnv",
+  base_height_target: float,
+  sensor_name: str | None = None,
+  asset_cfg: SceneEntityCfg = _DEFAULT_ASSET_CFG,
+) -> torch.Tensor:
+  """Penalize fast horizontal foot motion near the ground (MoE-CTS feet_regulation).
+
+  Feet close to the ground get a much larger penalty for lateral speed; lifted
+  (swing) feet are barely penalized. This discourages foot scuffing/dragging and
+  encourages the robot to lift its feet before moving them — exactly the clean
+  high-stepping gait needed for blind obstacle traversal. Gated by uprightness.
+
+  reward = Σ_feet ( ||v_xy_foot||² · exp(-foot_height / (0.025·base_target)) )
+  """
+  asset: Entity = env.scene[asset_cfg.name]
+  feet_pos_w = asset.data.site_pos_w[:, asset_cfg.site_ids, :]        # [B, N, 3]
+  feet_xy_vel_w = asset.data.site_lin_vel_w[:, asset_cfg.site_ids, :2]  # [B, N, 2]
+  base_pos_w = asset.data.root_link_pos_w.unsqueeze(1)               # [B, 1, 3]
+
+  base_height = _terrain_relative_base_height(env, sensor_name, asset_cfg)  # [B]
+  # Foot height above terrain ≈ base_height - (base_z - foot_z).
+  feet_below_base = base_pos_w[:, :, 2] - feet_pos_w[:, :, 2]         # [B, N]
+  feet_height = torch.clamp(base_height.unsqueeze(1) - feet_below_base, min=0.0)
+
+  scale = 0.025 * base_height_target
+  cost = (
+    feet_xy_vel_w.pow(2).sum(dim=-1) * torch.exp(-feet_height / scale)
+  ).sum(dim=-1)  # [B]
+  return cost * _upright_gate(env, asset_cfg)
+
+
+def undesired_contacts(
+  env: "ManagerBasedRlEnv",
+  sensor_name: str,
+  threshold: float = 5.0,
+) -> torch.Tensor:
+  """Penalize thigh/calf contacts above a force threshold (MoE-CTS undesired_contacts).
+
+  Counts, per env, how many monitored geoms have contact force magnitude above
+  ``threshold`` Newtons. Discourages the robot from scuffing thighs/shanks on
+  steps/obstacles instead of lifting the leg clear.
+  """
+  contact_sensor: ContactSensor = env.scene[sensor_name]
+  force = contact_sensor.data.force  # [B, N, 3]
+  assert force is not None
+  force_norm = torch.norm(force, dim=-1)  # [B, N]
+  is_contact = force_norm > threshold
+  return torch.sum(is_contact.float(), dim=1)  # [B]
+
+
+def joint_pos_limits(
+  env: "ManagerBasedRlEnv",
+  asset_cfg: SceneEntityCfg = _DEFAULT_ASSET_CFG,
+) -> torch.Tensor:
+  """Penalize joint positions exceeding the soft limits (MoE-CTS joint_pos_limits)."""
+  asset: Entity = env.scene[asset_cfg.name]
+  q = asset.data.joint_pos[:, asset_cfg.joint_ids]                     # [B, N]
+  limits = asset.data.soft_joint_pos_limits[:, asset_cfg.joint_ids, :]  # [B, N, 2]
+  out_of_lower = (limits[..., 0] - q).clamp(min=0.0)
+  out_of_upper = (q - limits[..., 1]).clamp(min=0.0)
+  return torch.sum(out_of_lower + out_of_upper, dim=1)  # [B]
+
+
+def joint_pos_penalty_l1(
+  env: "ManagerBasedRlEnv",
+  command_name: str,
+  stand_still_scale: float = 1.0,
+  velocity_threshold: float = 0.1,
+  command_threshold: float = 0.1,
+  asset_cfg: SceneEntityCfg = _DEFAULT_ASSET_CFG,
+) -> torch.Tensor:
+  """Command-aware L1 deviation of joints from default (MoE-CTS joint_pos_penalty_l1).
+
+  When the robot is commanded to move (or is moving), the L1 deviation from the
+  default pose is penalized at weight 1×; when standing still (small command and
+  low body velocity) the penalty is scaled by ``stand_still_scale``. Intended for
+  thigh/calf joints (hip already handled by hip_joint_deviation).
+  """
+  asset: Entity = env.scene[asset_cfg.name]
+  command = env.command_manager.get_command(command_name)
+  assert command is not None
+  cmd = torch.linalg.norm(command, dim=1)
+  body_vel = torch.linalg.norm(asset.data.root_link_lin_vel_b[:, :2], dim=1)
+  deviation = torch.linalg.norm(
+    asset.data.joint_pos[:, asset_cfg.joint_ids]
+    - asset.data.default_joint_pos[:, asset_cfg.joint_ids],
+    dim=1,
+    ord=1,
+  )
+  moving = torch.logical_or(cmd > command_threshold, body_vel > velocity_threshold)
+  return torch.where(moving, deviation, stand_still_scale * deviation)
+
+

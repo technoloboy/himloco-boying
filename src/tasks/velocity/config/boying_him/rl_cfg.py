@@ -56,5 +56,5 @@ def boying_him_ppo_runner_cfg() -> RslRlOnPolicyRunnerCfg:
     logger="tensorboard",
     save_interval=20,
     num_steps_per_env=100,
-    max_iterations=200000,
+    max_iterations=50000,
   )

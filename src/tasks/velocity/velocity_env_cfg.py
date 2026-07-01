@@ -39,6 +39,7 @@ from mjlab.utils.noise import UniformNoiseCfg as Unoise  # 均匀噪声配置（
 from mjlab.viewer import ViewerConfig  # 查看器配置（分辨率、帧率等）
 
 import src.tasks.velocity.mdp as mdp
+from src.tasks.velocity.terrains_custom import HfRoughSlopedTerrainCfg
 
 
 # Terrain generator mirroring HIMLoco's 8-terrain structure, parameters scaled
@@ -52,7 +53,7 @@ _ROUGH_TERRAIN_CFG = TerrainGeneratorCfg(
   num_cols=20,
   curriculum=False,  # boying/env_cfgs.py sets curriculum=True for training
   sub_terrains={
-    "flat": BoxFlatTerrainCfg(proportion=0.1),
+    "flat": BoxFlatTerrainCfg(proportion=0.05),
     "hf_pyramid_slope": HfPyramidSlopedTerrainCfg(
       proportion=0.1,
       slope_range=(0.0, 0.4),
@@ -69,33 +70,39 @@ _ROUGH_TERRAIN_CFG = TerrainGeneratorCfg(
       horizontal_scale=0.2,
     ),
     "pyramid_stairs": BoxPyramidStairsTerrainCfg(
-      proportion=0.15,
-      step_height_range=(0.05, 0.15),  # was (0.05, 0.20): lower for Boying (28cm stand height)
-      step_width=0.5,                  # was 0.3: wider tread → 3 steps, more foothold room
+      proportion=0.20,  # 0.15→0.20: stronger obstacle-traversal focus (MoE-CTS)
+      step_height_range=(0.05, 0.15),  # lower for Boying (28cm stand height)
+      step_width=0.5,                  # wider tread → 3 steps, more foothold room
       platform_width=3.0,
       border_width=1.0,
     ),
     "pyramid_stairs_inv": BoxInvertedPyramidStairsTerrainCfg(
-      proportion=0.15,
-      step_height_range=(0.05, 0.15),  # was (0.05, 0.20)
-      step_width=0.5,                  # was 0.3
+      proportion=0.20,  # 0.15→0.20
+      step_height_range=(0.05, 0.15),
+      step_width=0.5,
       platform_width=3.0,
       border_width=1.0,
     ),
     "hf_discrete_obstacles": HfDiscreteObstaclesTerrainCfg(
-      proportion=0.20,
+      proportion=0.15,  # 0.20→0.15
       obstacle_height_range=(0.05, 0.15),
-      obstacle_width_range=(0.4, 0.8),
+      obstacle_width_range=(1.0, 2.0),  # 0.4-0.8→1.0-2.0: wider, easier to cross (MoE-CTS)
       num_obstacles=20,
       platform_width=1.0,
       horizontal_scale=0.2,
     ),
-    "hf_perlin_noise": HfPerlinNoiseTerrainCfg(
+    # rough_slope: pyramid slope + difficulty-scaled roughness (MoE-CTS rough_slope).
+    "rough_slope": HfRoughSlopedTerrainCfg(
       proportion=0.10,
-      height_range=(0.0, 0.08),
+      slope_range=(0.0, 0.4),
+      noise_range=(0.0, 0.06),
+      noise_step=0.005,
+      downsampled_scale=0.2,
+      platform_width=2.0,
+      border_width=0.25,
       horizontal_scale=0.2,
     ),
-    "hf_perlin_noise2": HfPerlinNoiseTerrainCfg(
+    "hf_perlin_noise": HfPerlinNoiseTerrainCfg(
       proportion=0.10,
       height_range=(0.0, 0.08),
       horizontal_scale=0.2,
@@ -535,6 +542,37 @@ def make_velocity_env_cfg() -> ManagerBasedRlEnvCfg:
         "max_curriculum": 2.0,
         "expand_step": 0.2,
         "tracking_threshold": 0.8,
+      },
+    ),
+    # Reward-weight curricula (MoE-CTS gradual_reward_weight_modification).
+    # Steps = iteration × num_steps_per_env(100). Stepwise approx of linear ramp.
+    # lin_vel_z_l2: -2.0 → 0 over first ~1500 iter (early anti-bounce, then release
+    # so the robot dares to climb; uprightness gate + other terms keep z controlled).
+    "reward_weight_lin_vel_z": CurriculumTermCfg(
+      func=mdp.reward_weight,
+      params={
+        "reward_name": "lin_vel_z_l2",
+        "weight_stages": [
+          {"step": 0, "weight": -2.0},
+          {"step": 50000, "weight": -1.3},
+          {"step": 100000, "weight": -0.6},
+          {"step": 150000, "weight": 0.0},
+        ],
+      },
+    ),
+    # base_height_l2: -1.0 → -10.0 over first ~5000 iter (loose early → strong late,
+    # tighten posture only after the robot has learned to move/traverse).
+    "reward_weight_base_height": CurriculumTermCfg(
+      func=mdp.reward_weight,
+      params={
+        "reward_name": "base_height_l2",
+        "weight_stages": [
+          {"step": 0, "weight": -1.0},
+          {"step": 125000, "weight": -3.0},
+          {"step": 250000, "weight": -5.0},
+          {"step": 375000, "weight": -7.5},
+          {"step": 500000, "weight": -10.0},
+        ],
       },
     ),
   }

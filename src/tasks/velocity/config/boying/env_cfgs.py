@@ -9,7 +9,11 @@ from mjlab.managers.event_manager import EventTermCfg
 from mjlab.sensor import ContactMatch, ContactSensorCfg, RayCastSensorCfg
 from mjlab.tasks.velocity import mdp
 from mjlab.tasks.velocity.mdp import UniformVelocityCommandCfg
+from mjlab.managers.reward_manager import RewardTermCfg
+from mjlab.managers.curriculum_manager import CurriculumTermCfg
+from mjlab.managers.scene_entity_config import SceneEntityCfg
 
+import src.tasks.velocity.mdp as boying_mdp
 from src.tasks.velocity.velocity_env_cfg import make_velocity_env_cfg
 
 
@@ -61,9 +65,28 @@ def boying_rough_env_cfg(play: bool = False) -> ManagerBasedRlEnvCfg:
     num_slots=1,
     history_length=4,
   )
+  # Thigh/calf ground contacts — monitored so undesired_contacts can penalize
+  # the robot for scuffing legs on steps/obstacles instead of lifting clear.
+  # These contacts do NOT terminate (only base/head do); they are penalized.
+  thigh_calf_geoms = tuple(
+    f"{leg}_{seg}{i}_collision"
+    for leg in ("FR", "FL", "RR", "RL")
+    for seg in ("thigh", "calf")
+    for i in (1, 2, 3)
+  )
+  thigh_calf_contact_cfg = ContactSensorCfg(
+    name="thigh_calf_contact",
+    primary=ContactMatch(mode="geom", entity="robot", pattern=thigh_calf_geoms),
+    secondary=ContactMatch(mode="body", pattern="terrain"),
+    fields=("found", "force"),
+    reduce="none",
+    num_slots=1,
+    history_length=3,
+  )
   cfg.scene.sensors = (cfg.scene.sensors or ()) + (
     feet_ground_cfg,
     base_head_ground_cfg,
+    thigh_calf_contact_cfg,
   )
 
   if cfg.scene.terrain is not None and cfg.scene.terrain.terrain_generator is not None:
@@ -116,6 +139,49 @@ def boying_rough_env_cfg(play: bool = False) -> ManagerBasedRlEnvCfg:
   # pull constrained the lateral re-stepping/hip-swing needed to balance on rough
   # terrain; symmetry is already covered by action_symmetry_l2.
   cfg.rewards["hip_joint_deviation"].weight = -0.05
+
+  # ── MoE-CTS (RSS2026) inspired obstacle-traversal improvements (Boying only) ──
+  # (1) Uprightness gate: swap 3 penalty terms to gated versions so the huge
+  #     gradient spike at the moment of falling vanishes (removes training blowups).
+  cfg.rewards["lin_vel_z_l2"].func = boying_mdp.lin_vel_z_l2_gated
+  cfg.rewards["body_orientation_l2"].func = boying_mdp.body_orientation_l2_gated
+  cfg.rewards["body_ang_vel"].func = boying_mdp.body_angular_velocity_penalty_gated
+
+  # (2) feet_regulation: penalize fast horizontal foot motion near ground → high
+  #     stepping gait for blind obstacle traversal (weight -0.05, MoE-CTS parity).
+  cfg.rewards["feet_regulation"] = RewardTermCfg(
+    func=boying_mdp.feet_regulation,
+    weight=-0.05,
+    params={
+      "base_height_target": 0.28,
+      "sensor_name": "terrain_scan",
+      "asset_cfg": SceneEntityCfg("robot", site_names=site_names),
+    },
+  )
+  # (3a) undesired_contacts: penalize thigh/calf scuffing on obstacles (weight -1.0).
+  cfg.rewards["undesired_contacts"] = RewardTermCfg(
+    func=boying_mdp.undesired_contacts,
+    weight=-1.0,
+    params={"sensor_name": "thigh_calf_contact", "threshold": 5.0},
+  )
+  # (3b) joint_pos_limits: penalize joints hitting soft limits (weight -2.0).
+  cfg.rewards["joint_pos_limits"] = RewardTermCfg(
+    func=boying_mdp.joint_pos_limits,
+    weight=-2.0,
+    params={"asset_cfg": SceneEntityCfg("robot", joint_names=(".*_joint",))},
+  )
+  # (3c) joint_pos_penalty_l1: command-aware thigh/calf deviation (weight -0.01).
+  cfg.rewards["joint_pos_penalty_l1"] = RewardTermCfg(
+    func=boying_mdp.joint_pos_penalty_l1,
+    weight=-0.01,
+    params={
+      "command_name": "twist",
+      "stand_still_scale": 1.0,
+      "velocity_threshold": 0.1,
+      "command_threshold": 0.1,
+      "asset_cfg": SceneEntityCfg("robot", joint_names=(".*_(thigh|calf)_joint",)),
+    },
+  )
 
   cfg.terminations["illegal_contact"] = TerminationTermCfg(
     func=mdp.illegal_contact,
