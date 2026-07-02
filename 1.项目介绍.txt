@@ -610,8 +610,8 @@ python scripts/train.py Boying-HIM-Rough --gpu-ids 0 1 --env.scene.num-envs=4096
 python scripts/train.py Boying-HIM-Rough \
     --env.scene.num-envs=1024 \
     --agent.resume=True \
-    --agent.load_run="2026-06-30_19-47-01" \
-    --agent.load_checkpoint="model_6000.pt" 
+    --agent.load_run="2026-07-02_03-24-43" \
+    --agent.load_checkpoint="model_3700.pt" 
 
 1180效果不错
 onnx_file
@@ -657,3 +657,4 @@ python export_him_onnx.py --checkpoint logs/rsl_rl/boying_him_velocity/2026-06-2
 tensorboard --logdir logs/rsl_rl/boying_him_velocity
 
 
+修改foot_friction和base_com两个dr项的触发时机，也改成reset时候触发
