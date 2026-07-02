@@ -175,16 +175,16 @@ def boying_rough_env_cfg(play: bool = False) -> ManagerBasedRlEnvCfg:
       "asset_cfg": SceneEntityCfg("robot", site_names=site_names),
     },
   )
-  # (3a) undesired_contacts: penalize thigh/calf scuffing on obstacles (weight -1.0).
+  # (3a) undesired_contacts: penalize thigh/calf scuffing on obstacles (weight -0.5).
   cfg.rewards["undesired_contacts"] = RewardTermCfg(
     func=boying_mdp.undesired_contacts,
-    weight=-1.0,
+    weight=-0.5,
     params={"sensor_name": "thigh_calf_contact", "threshold": 5.0},
   )
-  # (3b) joint_pos_limits: penalize joints hitting soft limits (weight -2.0).
+  # (3b) joint_pos_limits: penalize joints hitting soft limits (weight -0.5).
   cfg.rewards["joint_pos_limits"] = RewardTermCfg(
     func=boying_mdp.joint_pos_limits,
-    weight=-2.0,
+    weight=-0.5,
     params={"asset_cfg": SceneEntityCfg("robot", joint_names=(".*_joint",))},
   )
   # (3c) joint_pos_penalty_l1: command-aware thigh/calf deviation (weight -0.01).

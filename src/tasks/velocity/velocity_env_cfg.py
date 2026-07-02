@@ -348,7 +348,7 @@ def make_velocity_env_cfg() -> ManagerBasedRlEnvCfg:
       },
     ),
     "foot_friction": EventTermCfg(
-      mode="reset",
+      mode="startup",
       func=dr.geom_friction,
       params={
         "asset_cfg": SceneEntityCfg("robot", geom_names=()),  # Set per-robot.
@@ -563,18 +563,16 @@ def make_velocity_env_cfg() -> ManagerBasedRlEnvCfg:
         ],
       },
     ),
-    # base_height_l2: -1.0 → -10.0 over first ~5000 iter (loose early → strong late,
-    # tighten posture only after the robot has learned to move/traverse).
+    # base_height_l2: gentle ramp -1.0 → -1.3 → -1.6 (avoid the huge -3.0/-10.0
+    # jumps that previously caused Value-loss blow-up + policy collapse).
     "reward_weight_base_height": CurriculumTermCfg(
       func=mdp.reward_weight,
       params={
         "reward_name": "base_height_l2",
         "weight_stages": [
           {"step": 0, "weight": -1.0},
-          {"step": 125000, "weight": -3.0},
-          {"step": 250000, "weight": -5.0},
-          {"step": 375000, "weight": -7.5},
-          {"step": 500000, "weight": -10.0},
+          {"step": 250000, "weight": -1.3},
+          {"step": 500000, "weight": -1.6},
         ],
       },
     ),
