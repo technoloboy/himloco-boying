@@ -358,7 +358,7 @@ def make_velocity_env_cfg() -> ManagerBasedRlEnvCfg:
       },
     ),
     "encoder_bias": EventTermCfg(
-      mode="reset",
+      mode="startup",
       func=dr.encoder_bias,
       params={
         "asset_cfg": SceneEntityCfg("robot"),
