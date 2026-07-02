@@ -595,27 +595,32 @@ def hip_joint_deviation_l2(
     return torch.sum(torch.square(deviation), dim=1)                       # [B]
 
 
-def action_symmetry_l2(env: ManagerBasedRlEnv) -> torch.Tensor:
-  """Penalize left-right action asymmetry (bilateral symmetry: FL↔FR, RL↔RR).
+def action_symmetry_l2(
+  env: ManagerBasedRlEnv,
+  asset_cfg: SceneEntityCfg = _DEFAULT_ASSET_CFG,
+) -> torch.Tensor:
+  """Penalize left-right action AMPLITUDE asymmetry (MoE-CTS action_mirror style).
 
-  Hip abduction actions have opposite signs for left vs right legs;
-  thigh and calf actions should match.
+  Uses |a_L| - |a_R| (phase-agnostic). A trot gait keeps the left and right legs
+  in antiphase, so the raw signed difference (a_L - a_R) is large even for a
+  perfectly symmetric gait — penalizing it would fight normal locomotion. Taking
+  magnitudes measures true limping (one side working harder) without penalizing
+  gait phase. Gated by uprightness so falls/large disturbances aren't penalized.
 
   Joint index layout (FL→FR→RL→RR, hip→thigh→calf per leg):
     FL: 0,1,2  FR: 3,4,5  RL: 6,7,8  RR: 9,10,11
+  Pairs: FL↔FR, RL↔RR.
   """
-  a = env.action_manager.action  # [B, 12]
-  # hip pairs: opposite signs → penalise (a_L + a_R)²
-  # thigh/calf pairs: same sign → penalise (a_L - a_R)²
+  a = env.action_manager.action.abs()  # [B, 12]
   error = (
-    (a[:, 0] + a[:, 3]) ** 2    # FL_hip + FR_hip
-    + (a[:, 1] - a[:, 4]) ** 2  # FL_thigh - FR_thigh
-    + (a[:, 2] - a[:, 5]) ** 2  # FL_calf - FR_calf
-    + (a[:, 6] + a[:, 9]) ** 2  # RL_hip + RR_hip
-    + (a[:, 7] - a[:, 10]) ** 2 # RL_thigh - RR_thigh
-    + (a[:, 8] - a[:, 11]) ** 2 # RL_calf - RR_calf
+    (a[:, 0] - a[:, 3]) ** 2    # hip   FL-FR
+    + (a[:, 1] - a[:, 4]) ** 2  # thigh FL-FR
+    + (a[:, 2] - a[:, 5]) ** 2  # calf  FL-FR
+    + (a[:, 6] - a[:, 9]) ** 2  # hip   RL-RR
+    + (a[:, 7] - a[:, 10]) ** 2 # thigh RL-RR
+    + (a[:, 8] - a[:, 11]) ** 2 # calf  RL-RR
   ) / 12.0
-  return error
+  return error * _upright_gate(env, asset_cfg)
 
 
 # =============================================================================
