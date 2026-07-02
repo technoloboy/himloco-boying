@@ -657,8 +657,3 @@ python export_him_onnx.py --checkpoint logs/rsl_rl/boying_him_velocity/2026-06-2
 tensorboard --logdir logs/rsl_rl/boying_him_velocity
 
 
-│ pyramid_stairs 上楼梯          │ 15%  │ step_height 0.05→0.150m, step_width 0.5m │ 15cm 台阶     │
-├────────────────────────────────┼──────┼─────────────────────────────────────────┼───────────────┤
-│ pyramid_stairs_inv 下楼梯      │ 15%  │ step_height 0.05→0.150m  step_width 0.5m │ 15cm 台阶     │
-├────────────────────────────────┼──────┼─────────────────────────────────────────┼───────────────┤
-│ hf_discrete_obstacles 离散障碍 │ 20%  │ obstacle_height 0.05→0.15m              │ 15cm 障碍     │
